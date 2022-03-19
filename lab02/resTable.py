@@ -4,7 +4,7 @@ from os import startfile
 
 class ExcelTable(object):
     filename = 'results.xlsx'
-    error_msg = 'Ошибка'
+    error_msg = 'Ошибка: не удалось открыть файл'
     header = ['x0', 'x1', 'x2', 'x1x2',
               'y', 'y л', 'y нел',
               '|y - y л|', '|y - y нел|']
@@ -41,7 +41,7 @@ class ExcelTable(object):
 
         numRows = len(row)
         for i in range(4, numRows):
-            row[i] = '%.4f' % row[i]
+            row[i] = '%.3f' % row[i]
         tbl.append(row)
 
         try:

@@ -1,5 +1,4 @@
 import sys
-import matplotlib.pyplot as plt
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QTableWidgetItem
 from PyQt5.QtGui import QRegExpValidator
@@ -23,21 +22,29 @@ class MyWindow(QMainWindow):
         self.ui.maxG.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.maxG))
         self.ui.minP.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.minP))
         self.ui.maxP.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.maxP))
-        self.ui.x1.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.x1))
-        self.ui.x2.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.x2))
+        self.ui.x1.setValidator(QRegExpValidator(QRegExp("[0-9.-]*"), self.ui.x1))
+        self.ui.x2.setValidator(QRegExpValidator(QRegExp("[0-9.-]*"), self.ui.x2))
         self.ui.timeM.setValidator(QRegExpValidator(QRegExp("[0-9.]*"), self.ui.timeM))
         self.ui.numTasks.setValidator(QRegExpValidator(QRegExp("[1-9][0-9]*"), self.ui.numTasks))
 
         self.ui.DoModeling.clicked.connect(self.doModeling)
         self.ui.Checking.clicked.connect(self.doChecking)
 
+        self.deactivateButton()
+
     def activateInput(self):
         self.ui.linear.setEnabled(True)
         self.ui.nonlinear.setEnabled(True)
 
+    def activateButton(self):
+        self.ui.Checking.setEnabled(True)
+
     def deactivateInput(self):
         self.ui.linear.setEnabled(False)
         self.ui.nonlinear.setEnabled(False)
+
+    def deactivateButton(self):
+        self.ui.Checking.setEnabled(False)
 
     def setEquations(self, strLin: str, strNonlin: str):
         self.ui.linear.setText(strLin)
@@ -66,6 +73,7 @@ class MyWindow(QMainWindow):
             matr, a = self.experiment.run()
             self.demonstrateRes(matr, a)
 
+            self.activateButton()
         except Exception as e:
             msg = QMessageBox()
             msg.setText('ОШИБКА!\n' + repr(e))
@@ -73,30 +81,22 @@ class MyWindow(QMainWindow):
             msg.exec()
 
     def doChecking(self):
-        pass
-        '''i = 0.001
-        avgArr = [0]
-        xArr = [0]
-        while i <= 1.01:
-            tempArr = []
-            for j in range(30):
-                generator = Generator(ExponentGenerator(i))
-                processor = Processor(WeibullGenerator(2, 1))
-                model = Model([generator], [processor])
-                avgTemp = model.doModeling(300, None)['avgWait']
-                tempArr.append(avgTemp)
-            if sum(tempArr) / len(tempArr) > avgArr[-1]:
-                xArr.append(i)
-                avgArr.append(sum(tempArr) / len(tempArr))
-                i += 0.05
-            print(i)
+        try:
+            intG = float(self.ui.x1.text())
+            intP = float(self.ui.x2.text())
+            if abs(intG) > 1 or abs(intP) > 1:
+                msg = QMessageBox()
+                msg.setText('ОШИБКА! Координаты точки должны быть от -1 до 1')
+                msg.show()
+                msg.exec()
 
-        plt.plot(xArr, avgArr)
-        plt.grid(True)
-        plt.title("I: Экспоненциальный закон; II: Вейбулла с парам.2")
-        plt.ylabel('Среднее время ожидания заявки')
-        plt.xlabel('Загрузка системы')
-        plt.show()'''
+            res = self.experiment.check(intG, intP)
+            self.addCheck(res)
+        except Exception as e:
+            msg = QMessageBox()
+            msg.setText('ОШИБКА!\n' + repr(e))
+            msg.show()
+            msg.exec()
 
     def demonstrateRes(self, matr: List[List[float]], a: List[float]):
         strLin = "y = %.3f + %.3fx1 + %.3fx2" % (a[0], a[1], a[2])
@@ -108,6 +108,20 @@ class MyWindow(QMainWindow):
 
         self.tableExcel = ExcelTable('results.xlsx')
         self.tableExcel.create(matr)
+        self.tableExcel.open()
+
+    def addCheck(self, res: dict):
+        intG = res['intG']
+        intP = res['intP']
+        waitTime = res['waitAvg']
+        linRes = res['lin']
+        nonLin = res['nonLin']
+
+        row = [1, intG, intP, intG * intP,
+               waitTime, linRes, nonLin,
+               abs(waitTime - linRes), abs(waitTime - nonLin)]
+
+        self.tableExcel.add_one_row(row)
         self.tableExcel.open()
 
 

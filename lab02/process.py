@@ -32,6 +32,28 @@ class Experiment(object):
         matr0, self.a = self.calculate(matr0, waitArr, matr)
         return matr0, self.a
 
+    def check(self, intG: float, intP: float):
+        waitTime = 0
+        intGN = self.scale(intG, self.intGMin, self.intGMax)
+        intPN = self.scale(intP, self.intPMin, self.intPMax)
+
+        for i in range(self.numModels):
+            model = Model([Generator(ExponentGenerator(intGN))],
+                          [Processor(WeibullGenerator(2, intPN))])
+            info = model.doModeling(self.numTasks, self.time)
+            waitTime += info['avgWait']
+        waitTime /= self.numModels
+
+        linRes = self.a[0] + self.a[1] * intG + self.a[2] * intP
+        nonLinRes = self.a[0] + self.a[1] * intG + self.a[2] * intP + \
+                    self.a[3] * intG * intP
+
+        return {'intG': intG,
+                'intP': intP,
+                'waitAvg': waitTime,
+                'lin': linRes,
+                'nonLin': nonLinRes}
+
     def getZeroMatr(self) -> List[List[float]]:
         return [[0 for i in range(self.sizeMatr)] for i in range(self.sizeMatr)]
 
@@ -87,13 +109,12 @@ class Experiment(object):
         return waitArr
 
     def calculate(self, matr0: List[List[float]], y: List[float], matr: List[List[float]]):
-        print(y)
         a: List[float] = []
         for i in range(len(matr)):
             temp = 0
             for j in range(len(matr[i])):
                 temp += matr[i][j] * y[j]
-            a.append(temp)  # TODO / sizeMatr
+            a.append(temp)
 
         yLinear = []
         yNonlinear = []
@@ -130,5 +151,3 @@ class Experiment(object):
         for row in arr:
             res.append(row.tolist())
         return res
-
-
